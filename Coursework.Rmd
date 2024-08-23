@@ -1,0 +1,533 @@
+---
+title: "Coursework"
+output:
+  word_document: default
+  html_document: default
+date: "2024-03-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+##1a 
+
+```{r}
+# Load required libraries
+library(magrittr)  # For piping %>%
+library(ggplot2)   # For plotting
+library(MASS)      # For mvrnorm()
+
+# Define the target distribution function
+f <- function(x) {
+  return(0.5 * exp(-abs(x)))
+}
+
+# Random Walk Metropolis algorithm
+random_walk_metropolis <- function(N, s) {
+  x <- numeric(N)
+  x[1] <- 0  # Initial value
+  for (i in 2:N) {
+    x_prev <- x[i - 1]
+    x_proposed <- rnorm(1, x_prev, s)
+    ratio <- f(x_proposed) / f(x_prev)
+    u <- runif(1)
+    if (u < ratio) {
+      x[i] <- x_proposed
+    } else {
+      x[i] <- x_prev
+    }
+  }
+  return(x)
+}
+
+# Parameters
+N <- 10000
+s <- 1
+
+# Generate samples
+samples <- random_walk_metropolis(N, s)
+
+# Convert samples to a data frame
+samples_df <- data.frame(x = samples)
+
+# Plot histogram
+print(ggplot(samples_df) +
+        geom_histogram(aes(x = x, y = ..density..), bins = 50, fill = 'skyblue', alpha = 0.5) +
+        stat_function(fun = dnorm, args = list(mean = mean(samples), sd = sd(samples)), color = 'red', size = 1) +
+        stat_function(fun = f, color = 'green', size = 1) +
+        labs(x = 'x', y = 'Density', title = 'Histogram and Density Plot') +
+        theme_minimal())
+
+# Report sample mean and standard deviation
+cat("Sample Mean:", mean(samples), "\n")
+cat("Sample Standard Deviation:", sd(samples), "\n")
+
+```
+
+##1b
+
+---
+title: 1b
+output: html_document
+---
+```{r}
+
+## 1b
+
+# Load required library
+library(ggplot2)
+
+# Function to generate random walk Metropolis chains
+generate_chains <- function(N, s, J) {
+  chains <- list()
+  for (j in 1:J) {
+    x <- numeric(N + 1)
+    x[1] <- rnorm(1, 0, 1)  # Initial value
+    for (i in 2:(N + 1)) {
+      x_proposed <- rnorm(1, x[i - 1], s)
+      ratio <- exp(-abs(x_proposed)) / exp(-abs(x[i - 1]))
+      u <- runif(1)
+      if (u < ratio) {
+        x[i] <- x_proposed
+      } else {
+        x[i] <- x[i - 1]
+      }
+    }
+    chains[[j]] <- x
+  }
+  return(chains)
+}
+
+# Function to compute sample mean and within-sample variance for each chain
+compute_statistics <- function(chains) {
+  M <- numeric(length(chains))
+  V <- numeric(length(chains))
+  for (i in 1:length(chains)) {
+    M[i] <- mean(chains[[i]])
+    V[i] <- var(chains[[i]])
+  }
+  return(list(M = M, V = V))
+}
+
+# Function to compute bR value
+compute_bR <- function(M, V) {
+  J <- length(M)
+  W <- mean(V)
+  M_bar <- mean(M)
+  B <- mean((M - M_bar)^2)
+  bR <- sqrt((B + W) / W)
+  return(bR)
+}
+
+# Define parameters
+N <- 2000
+J <- 4
+s_values <- seq(0.001, 1, length.out = 100)  # Values of s in the interval [0.001, 1]
+
+bR_values <- numeric(length(s_values))
+
+# Iterate over s values
+for (i in 1:length(s_values)) {
+  chains <- generate_chains(N, s_values[i], J)
+  stats <- compute_statistics(chains)
+  bR_values[i] <- compute_bR(stats$M, stats$V)
+}
+
+# Plot the bR values over the grid of s values
+plot(s_values, bR_values, type = 'l', xlab = 's', ylab = 'bR', main = 'bR values over a grid of s values')
+grid()
+
+# Print the computed bR values
+cat("Computed bR values:", bR_values, "\n")
+
+```
+
+
+```{r}
+library(magrittr)
+
+# Set parameters
+N <- 2000
+s <- 0.001
+J <- 4
+
+# Generate J sequences (chains)
+chains <- replicate(J, random_walk_metropolis(N, s), simplify = FALSE)
+
+# Compute sample mean Mj and within-sample variance Vj for each chain
+Mj <- sapply(chains, mean)
+Vj <- sapply(chains, var)
+
+# Compute overall sample mean M and overall within-sample variance W
+M <- mean(Mj)
+W <- mean(Vj)
+
+# Compute between-sample variance B
+B <- mean((Mj - M)^2)
+
+# Calculate bR value
+bR <- sqrt((B + W) / W)
+
+# Print bR value
+cat("bR value:", bR, "\n")
+
+# Print mean and variance of each chain
+cat("Mean of each chain:", Mj, "\n")
+cat("Variance of each chain:", Vj, "\n")
+```
+
+# Iterate through each table and perform operations
+for (table in tables) {
+  query <- paste("SELECT * FROM", table)
+  df <- dbGetQuery(conn, query)
+  # Perform operations on df
+  print(paste("Table:", table))
+  print(head(df))  # For example, print the first few rows of each data frame
+}
+
+
+```{r}
+# Load required libraries
+library(RSQLite)
+library(dplyr)
+library(ggplot2)
+library(readr)  
+library(lubridate)
+library(DBI)
+#conn <- dbConnect(RSQLite::SQLite(), "Planes.db")
+
+
+# Connect to SQLite database
+conn <- dbConnect(RSQLite::SQLite(), "C:/Users/brand/OneDrive/桌面/ST2195 Course Files/Coursework/Planes.db")
+
+
+data_Y1997 <- dbGetQuery(conn, "SELECT * FROM Y1997")
+data_Y1998 <- dbGetQuery(conn, "SELECT * FROM Y1998")
+data_Y1999 <- dbGetQuery(conn, "SELECT * FROM Y1999")
+data_Y2000 <- dbGetQuery(conn, "SELECT * FROM Y2000")
+data_Y2001 <- dbGetQuery(conn, "SELECT * FROM Y2001")
+data_Y2002 <- dbGetQuery(conn, "SELECT * FROM Y2002")
+data_Y2003 <- dbGetQuery(conn, "SELECT * FROM Y2003")
+data_Y2004 <- dbGetQuery(conn, "SELECT * FROM Y2004")
+data_Y2005 <- dbGetQuery(conn, "SELECT * FROM Y2005")
+data_Y2006 <- dbGetQuery(conn, "SELECT * FROM Y2006")
+
+#airports <- dbGetQuery(conn, "SELECT * FROM airports")
+#carriers <- dbGetQuery(conn, "SELECT * FROM carriers")
+#plane_data <- dbGetQuery(conn, "SELECT * FROM plane_data")
+```
+
+
+```{r}
+
+# Retrieve table names
+tables <- dbGetQuery(conn, "SELECT name FROM sqlite_master WHERE type='table';")
+
+# List to store DataFrames with their table names
+all_plane_delays_list <- list()
+
+# Iterate over tables
+for (table_name in tables$name) {
+  # Query data
+  query <- paste0("SELECT TAILNUM, ArrDelay, DepDelay, DepTime, DayOfWeek FROM ", table_name)
+  table_data <- dbGetQuery(conn, query)
+  
+  # Convert 'DepTime' to datetime
+  table_data$DepTime <- as.POSIXct(strptime(table_data$DepTime, format='%H%M'), format='%H:%M', tz='UTC')
+  
+  # Extract hour from 'DepTime'
+  table_data$DepTimeHour <- as.integer(format(table_data$DepTime, "%H"))
+  
+  # Filter out rows with negative values in 'ArrDelay' or 'DepDelay'
+  table_data_positive <- table_data[table_data$ArrDelay > 0 & table_data$DepDelay > 0, ]
+  
+  # Filter out rows where either 'ArrDelay' or 'DepDelay' is not equal to 0
+  table_data_filtered <- table_data_positive[table_data_positive$ArrDelay != 0 & table_data_positive$DepDelay != 0, ]
+  
+  # Drop rows where both 'ArrDelay' and 'DepDelay' are null
+  table_data_cleaned <- na.omit(table_data_filtered[, c("TailNum", "ArrDelay", "DepDelay", "DepTime", "DayOfWeek","DepTimeHour")])
+  
+  # Calculate 'AvgDelay' column
+  table_data_cleaned$AvgDelay <- (table_data_cleaned$DepDelay + table_data_cleaned$ArrDelay) / 2
+  
+  # Sort the DataFrame by 'AvgDelay' in descending order
+  table_data_sorted <- table_data_cleaned[order(-table_data_cleaned$AvgDelay), ]
+  
+  # Store the DataFrame in the list
+  all_plane_delays_list[[table_name]] <- select(table_data_sorted, -DepTime)
+}
+
+# Print or process all sorted DataFrames after the loop
+for (table_name in names(all_plane_delays_list)) {
+  print(paste("DataFrame for", table_name, ":"))
+  print(all_plane_delays_list[[table_name]])
+}
+
+
+```
+
+
+
+```{r}
+# List to store average departure delay by hour for each table
+avg_delay_by_hour_list <- list()
+
+# List to store average delay by day of the week for each table
+avg_delay_by_dayofweek_list <- list()
+
+# Iterate over tables
+for (table_name in names(all_plane_delays_list)) {
+  # Calculate average departure delay by hour
+  avg_delay_by_hour <- all_plane_delays_list[[table_name]] %>%
+    group_by(DepTimeHour) %>%
+    summarise(avg_dep_delay = mean(AvgDelay, na.rm = TRUE))
+  
+  # Calculate average delay by day of the week
+  avg_delay_by_dayofweek <- all_plane_delays_list[[table_name]] %>%
+    group_by(DayOfWeek) %>%
+    summarise(avg_delay = mean(AvgDelay, na.rm = TRUE))
+  
+  # Remove NA values from avg_delay_by_hour
+  avg_delay_by_hour <- avg_delay_by_hour[!is.na(avg_delay_by_hour$DepTimeHour), ]
+  
+  # Store the results in respective lists
+  avg_delay_by_hour_list[[table_name]] <- avg_delay_by_hour
+  avg_delay_by_dayofweek_list[[table_name]] <- avg_delay_by_dayofweek
+}
+
+# Print or process the results
+for (table_name in names(avg_delay_by_hour_list)) {
+  print(paste("Average departure delay by hour for", table_name, ":"))
+  print(avg_delay_by_hour_list[[table_name]])
+}
+
+for (table_name in names(avg_delay_by_dayofweek_list)) {
+  print(paste("Average delay by day of the week for", table_name, ":"))
+  print(avg_delay_by_dayofweek_list[[table_name]])
+}
+
+```
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Plot for average delay by day of the week
+ggplot(avg_delay_by_dayofweek, aes(x = factor(DayOfWeek), y = avg_delay)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Day of the Week", y = "Average Delay", title = "Average Delay by Day of the Week") +
+  theme_minimal()
+```
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Plotting
+ggplot(avg_delay_by_hour, aes(x = Y1997Hour, y = avg_dep_delay)) +
+  geom_line(color = "blue") +
+  labs(x = "Hour of the Day", y = "Average Departure Delay", title = "Average Departure Delay by Hour") +
+  scale_x_continuous(breaks = seq(0, 23, by = 1), labels = seq(0, 23, by = 1)) +
+  theme_minimal()
+```
+
+
+---
+2b
+---
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(RSQLite)
+library(DBI)
+
+# Set the working directory to where your database file is located
+setwd("C:/Users/brand/OneDrive/桌面/ST2195 Course Files/Coursework")
+
+
+conn <- dbConnect(RSQLite::SQLite(), "Planes.db")
+
+# Execute SQL query and retrieve results
+plane_data <- dbGetQuery(conn, "
+    SELECT {table_name}.TailNum, plane_data.year AS plane_manufacture_year, {table_name}.Year AS flight_year
+    FROM {table_name}
+    JOIN plane_data ON {table_name}.TAILNUM = plane_data.tailnum
+")
+
+# Create a DataFrame with column names
+plane_age <- as.data.frame(plane_data)
+
+# Convert columns to numeric
+plane_age$plane_manufacture_year <- as.numeric(plane_age$plane_manufacture_year)
+plane_age$flight_year <- as.numeric(plane_age$flight_year)
+
+# Remove rows with missing values
+plane_age <- na.omit(plane_age)
+
+# Calculate the age of each plane
+plane_age$plane_age <- plane_age$flight_year - plane_age$plane_manufacture_year
+
+# Print the DataFrame
+print(plane_age)
+
+```
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+# Drop rows with negative values in the plane_age column
+plane_age_cleaned <- plane_age[plane_age$plane_age > 0, ]
+
+# Define a function to categorize planes as "older" or "newer" based on their age
+categorize_plane_age <- function(age) {
+  if (age <= 20) {
+    return('New')
+  } else {
+    return('Old')
+  }
+}
+
+# Create a new column in the cleaned DataFrame to indicate whether each plane is older or newer
+plane_age_cleaned$Plane_Category <- sapply(plane_age_cleaned$plane_age, categorize_plane_age)
+
+```
+
+```{r}
+# Sort the DataFrame by plane_age in descending order
+plane_age_final <- plane_age_cleaned[, !(names(plane_age_cleaned) %in% c('plane_manufacture_year', 'flight_year'))]
+plane_age_final_sorted <- plane_age_final[order(-plane_age_final$plane_age), ]
+
+# Display the sorted DataFrame
+print(plane_age_final_sorted)
+
+```
+
+```{r} 
+#categorising 
+  old_planes <- subset(plane_age_final_sorted, Plane_Category == "Old")
+  new_planes <- subset(plane_age_final_sorted, Plane_Category == "New")
+  
+  print(old_planes)
+  print(new_planes)
+  
+  # Extracting key-value pairs from old_planes DataFrame
+  old_planes_dict <- setNames(old_planes$Plane_Category, old_planes$TailNum)
+  
+  # Extracting key-value pairs from new_planes DataFrame
+  new_planes_dict <- setNames(new_planes$Plane_Category, new_planes$TailNum)
+  
+  # Displaying the dictionaries
+  cat("Old Planes Dictionary:\n")
+  print(old_planes_dict)
+  
+  cat("New Planes Dictionary:\n")
+  print(new_planes_dict)
+
+```
+
+```{r}
+# Execute SQL query to select TAILNUM, ArrDelay, and DepDelay from Y1997
+Y1997_data <- dbGetQuery(conn, "
+    SELECT TAILNUM, ArrDelay, DepDelay
+    FROM Y1997
+")
+
+# Create a DataFrame from the fetched data
+Y1997_Delay <- as.data.frame(Y1997_data)
+
+# Drop rows where both 'ArrDelay' and 'DepDelay' are null
+Y1997_Delay_cleaned <- na.omit(Y1997_Delay_filtered)
+
+# Filter out rows with negative values in 'ArrDelay' or 'DepDelay' columns
+Y1997_Delay_cleaned_positive <- Y1997_Delay_cleaned[Y1997_Delay_cleaned$ArrDelay > 0 & Y1997_Delay_cleaned$DepDelay > 0, ]
+
+# Calculate AvgDelay column
+Y1997_Delay_cleaned_positive$AvgDelay <- (Y1997_Delay_cleaned_positive$DepDelay + Y1997_Delay_cleaned_positive$ArrDelay) / 2
+
+# Print the cleaned DataFrame
+print(Y1997_Delay_cleaned_positive)
+
+# Drop the 'ArrDelay' and 'DepDelay' columns
+Y1997_Delay_drop <- subset(Y1997_Delay_cleaned_positive, select = -c(ArrDelay, DepDelay))
+
+# Sort the DataFrame by 'AvgDelay' column in descending order
+Y1997_Delay_sorted <- Y1997_Delay_drop[order(Y1997_Delay_drop$AvgDelay, decreasing = TRUE), ]
+
+print(Y1997_Delay_sorted)
+
+
+
+```
+
+```{r}
+# Create a vector that combines old and new plane tail numbers
+plane_tailnums <- c(names(old_planes_dict), names(new_planes_dict))
+
+# Create a vector indicating the category of each plane tail number
+plane_categories <- c(rep("Old", length(old_planes_dict)), rep("New", length(new_planes_dict)))
+
+# Create a named vector mapping tail numbers to categories
+plane_category_dict <- setNames(plane_categories, plane_tailnums)
+
+# Add a new column indicating the category of each plane
+Y1997_Delay_sorted$Plane_Category <- plane_category_dict[Y1997_Delay_sorted$TailNum]
+
+# Now you can filter out old and new planes based on the 'Plane_Category' column
+Y1997_old_planes <- Y1997_Delay_sorted[Y1997_Delay_sorted$Plane_Category == 'Old', ]
+Y1997_new_planes <- Y1997_Delay_sorted[Y1997_Delay_sorted$Plane_Category == 'New', ]
+
+Y1997_old_planes_sorted <-na.omit(Y1997_old_planes)
+Y1997_new_planes_sorted <-na.omit(Y1997_new_planes)
+
+# Print the old and new planes DataFrames
+print("Old Planes:")
+print(Y1997_old_planes_sorted)
+
+print("New Planes:")
+print(Y1997_new_planes_sorted)
+
+```
+
+```{r}
+# Count the number of rows in cleaned data frames
+old_planes_count <- nrow(Y1997_old_planes_sorted)
+new_planes_count <- nrow(Y1997_new_planes_sorted)
+
+# Print the counts
+
+print("Total number of Old Planes:")
+print(old_planes_count)
+print("Total number of New Planes:")
+print(new_planes_count)
+
+```
+
+```{r}
+
+# Calculate average delay for old planes
+avg_delay_old_planes <- mean(Y1997_old_planes_sorted$AvgDelay, na.rm = TRUE)
+
+# Calculate average delay for new planes
+avg_delay_new_planes <- mean(Y1997_new_planes_sorted$AvgDelay, na.rm = TRUE)
+
+# Print average delays
+cat("Average delay for old planes:", avg_delay_old_planes, "\n")
+cat("Average delay for new planes:", avg_delay_new_planes, "\n")
+
+```
+```{r}
+
+# Calculate median delay for old planes
+median_delay_old_planes <- median(Y1997_old_planes_sorted$AvgDelay, na.rm = TRUE)
+
+# Calculate median delay for new planes
+median_delay_new_planes <- median(Y1997_new_planes_sorted$AvgDelay, na.rm = TRUE)
+
+# Print median delays
+cat("Median delay for old planes:", median_delay_old_planes, "\n")
+cat("Median delay for new planes:", median_delay_new_planes, "\n")
+
+
+```
